@@ -13,7 +13,7 @@
 #define DEFAULT_PORT "12345"
 #define MAX_CLIENTS 2
 #define TIMEOUT 2500
-#define BUFFER_SIZE 16
+#define BUFFER_SIZE 256
 
 #define LENGTH(X)               (sizeof X / sizeof X[0])
 

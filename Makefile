@@ -15,3 +15,6 @@ server: server.o
 
 client: client.o
 	${CC} -o $@ $+
+
+clean:
+	rm -f server client ${OBJ}
