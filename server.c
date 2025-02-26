@@ -112,11 +112,12 @@ int main(int argc, char *argv[])
         perror("buffer memory allocation");
       }
 
-      /* TODO: Add Server info */
-      /* sprintf(buffer, "Server:"); */
-
-      ret = get_from_stdin(&buffer, BUFFER_SIZE);
-      if (ret == -1) break;
+      ret = read(0, buffer, BUFFER_SIZE);
+      if (ret == -1) {
+        perror("read from stdin");
+        free(buffer);
+        break;
+      }
 
       for (int i = base_pollfd; i < client_count + base_pollfd; i++) {
         send(pfds[i].fd, buffer, BUFFER_SIZE, 0);
