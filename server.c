@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
   pfds[1].events = POLLIN;
 
   while (1) {
-    int ret = poll(pfds, LENGTH(pfds), TIMEOUT);
+    int ret = poll(pfds, base_pollfd+client_count, TIMEOUT);
 
     if (ret == -1) {
       perror("Poll failed");
