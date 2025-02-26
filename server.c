@@ -57,7 +57,8 @@ int main(int argc, char *argv[])
     exit(EXIT_FAILURE);
   }
 
-  if ((sockfd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol)) == -1) {
+  if ((sockfd = socket(servinfo->ai_family, servinfo->ai_socktype,
+          servinfo->ai_protocol)) == -1) {
     perror("Socket failed");
     exit(EXIT_FAILURE);
   }
@@ -78,17 +79,17 @@ int main(int argc, char *argv[])
 
   const int base_pollfd = 2; /* stdin and sockfd */
   const int max_pollfd = MAX_CLIENTS + base_pollfd;
-  struct pollfd pfds[max_pollfd];
+  struct pollfd fds[max_pollfd];
   int client_count = 0;
   int new_fd;
 
-  pfds[0].fd = 0; /* stdin */
-  pfds[0].events = POLLIN;
-  pfds[1].fd = sockfd;
-  pfds[1].events = POLLIN;
+  fds[0].fd = 0; /* stdin */
+  fds[0].events = POLLIN;
+  fds[1].fd = sockfd;
+  fds[1].events = POLLIN;
 
   while (1) {
-    int ret = poll(pfds, base_pollfd+client_count, TIMEOUT);
+    int ret = poll(fds, base_pollfd+client_count, TIMEOUT);
 
     if (ret == -1) {
       perror("Poll failed");
@@ -96,7 +97,7 @@ int main(int argc, char *argv[])
     }
 
     /* Read from stdin and broadcast message from server */
-    if (pfds[0].revents & POLLIN) {
+    if (fds[0].revents & POLLIN) {
       int ret;
       char *buffer = calloc(BUFFER_SIZE, sizeof(char));
       if (buffer == NULL) {
@@ -111,14 +112,20 @@ int main(int argc, char *argv[])
       }
 
       for (int i = base_pollfd; i < client_count + base_pollfd; i++) {
-        send(pfds[i].fd, buffer, BUFFER_SIZE, 0);
+        send(fds[i].fd, buffer, BUFFER_SIZE, 0);
       }
 
       free(buffer);
     }
 
     /* Check if there is new connection */
-    if (pfds[1].revents & POLLIN) {
+    if (fds[1].revents & POLLIN) {
+      /* TODO: reject new connection if max client has been reached */
+      /* if (client_count >= MAX_CLIENTS) { */
+      /*   printf("New connection attempted but maximum number client has been reached.\n"); */
+      /*   continue; */
+      /* } */
+
       struct sockaddr_storage incoming_addr;
       socklen_t addr_size = sizeof incoming_addr;
       new_fd = accept(sockfd, (struct sockaddr *)&incoming_addr, &addr_size);
@@ -127,32 +134,32 @@ int main(int argc, char *argv[])
         continue;
       }
 
-      pfds[client_count + base_pollfd].fd = new_fd;
-      pfds[client_count + base_pollfd].events = POLLIN;
-      client_count++;
-
-      if (client_count >= max_pollfd - base_pollfd) {
+      if (client_count >= MAX_CLIENTS) {
         printf("Max clients reached.\n");
       }
+
+      fds[client_count + base_pollfd].fd = new_fd;
+      fds[client_count + base_pollfd].events = POLLIN;
+      client_count++;
 
       printf("New client connected: %d\n", new_fd);
     }
 
     /* Check for any data in the client */
     for (int i = base_pollfd; i < client_count + base_pollfd; i++) {
-      if (pfds[i].revents & POLLIN) {
+      if (fds[i].revents & POLLIN) {
         char buffer[BUFFER_SIZE];
-        int bytes_received = recv(pfds[i].fd, buffer, sizeof buffer - 1, 0);
+        int bytes_received = recv(fds[i].fd, buffer, sizeof buffer - 1, 0);
         if (bytes_received < 0) {
           perror("Recv failed");
         } else if (bytes_received == 0) {
-          printf("Client %d disconnected\n", pfds[i].fd);
-          close(pfds[i].fd);
+          printf("Client %d disconnected\n", fds[i].fd);
+          close(fds[i].fd);
           client_count--;
-          /* TODO: reorder pfds */
+          fds[i] = fds[base_pollfd + client_count]; /* Reorder fds */
         } else {
           buffer[bytes_received] = '\0';
-          printf("Received from client %d: %s", pfds[i].fd, buffer);
+          printf("Received from client %d: %s", fds[i].fd, buffer);
         }
       }
     }
