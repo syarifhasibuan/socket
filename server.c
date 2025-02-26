@@ -128,11 +128,7 @@ int main(int argc, char *argv[])
         continue;
       }
 
-      fds[client_count + base_pollfd].fd = new_fd;
-      fds[client_count + base_pollfd].events = POLLIN;
-      client_count++;
-
-      if (client_count > MAX_CLIENTS) {
+      if (client_count >= MAX_CLIENTS) {
         char buffer[53];
         printf("Max clients has been reached.\n");
         printf("Rejecting connection...\n");
@@ -141,6 +137,10 @@ int main(int argc, char *argv[])
         close(new_fd);
         continue;
       }
+
+      fds[client_count + base_pollfd].fd = new_fd;
+      fds[client_count + base_pollfd].events = POLLIN;
+      client_count++;
 
       printf("New client connected: %d\n", new_fd);
     }
