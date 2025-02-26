@@ -120,12 +120,6 @@ int main(int argc, char *argv[])
 
     /* Check if there is new connection */
     if (fds[1].revents & POLLIN) {
-      /* TODO: reject new connection if max client has been reached */
-      /* if (client_count >= MAX_CLIENTS) { */
-      /*   printf("New connection attempted but maximum number client has been reached.\n"); */
-      /*   continue; */
-      /* } */
-
       struct sockaddr_storage incoming_addr;
       socklen_t addr_size = sizeof incoming_addr;
       new_fd = accept(sockfd, (struct sockaddr *)&incoming_addr, &addr_size);
@@ -134,13 +128,19 @@ int main(int argc, char *argv[])
         continue;
       }
 
-      if (client_count >= MAX_CLIENTS) {
-        printf("Max clients reached.\n");
-      }
-
       fds[client_count + base_pollfd].fd = new_fd;
       fds[client_count + base_pollfd].events = POLLIN;
       client_count++;
+
+      if (client_count > MAX_CLIENTS) {
+        char buffer[53];
+        printf("Max clients has been reached.\n");
+        printf("Rejecting connection...\n");
+        snprintf(buffer, 53, "Max clients has been reached. Closing connection...\n");
+        send(new_fd, buffer, 53, 0);
+        close(new_fd);
+        continue;
+      }
 
       printf("New client connected: %d\n", new_fd);
     }
