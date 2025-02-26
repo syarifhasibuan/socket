@@ -17,15 +17,6 @@
 
 #define LENGTH(X)               (sizeof X / sizeof X[0])
 
-int get_from_stdin(char **buffer, size_t buffer_size)
-{
-  if (fgets(*buffer, BUFFER_SIZE, stdin) == NULL) {
-    perror("fgets");
-    return -1;
-  }
-  return 0;
-}
-
 int main(int argc, char *argv[])
 {
   char *ip, *port;
