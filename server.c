@@ -8,14 +8,14 @@
 #include <unistd.h>
 #include <poll.h>
 
-#define BACKLOG 10
+#define BACKLOG      10
 #define DEFAULT_IP   "127.0.0.1"
 #define DEFAULT_PORT "12345"
-#define MAX_CLIENTS 10
-#define TIMEOUT 2500
-#define BUFFER_SIZE 256
+#define MAX_CLIENTS  10
+#define TIMEOUT      2500
+#define BUFFER_SIZE  256
 
-#define LENGTH(X)               (sizeof X / sizeof X[0])
+#define LENGTH(X)   (sizeof X / sizeof X[0])
 
 int main(int argc, char *argv[])
 {
@@ -102,10 +102,13 @@ int main(int argc, char *argv[])
     if (fds[0].revents & POLLIN) {
       char buffer[BUFFER_SIZE] = {0};
 
-      ret = read(0, buffer, BUFFER_SIZE);
+      ret = read(0, buffer, BUFFER_SIZE - 1);
+
       if (ret == -1) {
         perror("read from stdin");
         continue;
+      } else if (ret > 0) {
+        buffer[ret] = '\0';  // Null-terminate the string
       }
 
       for (int i = base_pollfd; i < client_count + base_pollfd; i++) {
@@ -125,7 +128,7 @@ int main(int argc, char *argv[])
       }
 
       if (client_count >= MAX_CLIENTS) {
-        char buffer[53];
+        char buffer[53] = {0};
         printf("Max clients has been reached.\n");
         printf("Rejecting connection...\n");
         snprintf(buffer, 53, "Max clients has been reached. Closing connection...\n");
@@ -146,7 +149,7 @@ int main(int argc, char *argv[])
 
       if (fds[i].revents & POLLIN) {
         char buffer[BUFFER_SIZE] = {0};
-        int bytes_received = recv(fds[i].fd, buffer, BUFFER_SIZE, 0);
+        int bytes_received = recv(fds[i].fd, buffer, sizeof(buffer) - 1, 0);
 
         if (bytes_received < 0) {
           perror("Recv failed");
@@ -156,7 +159,7 @@ int main(int argc, char *argv[])
           client_count--;
           fds[i] = fds[base_pollfd + client_count]; /* Reorder fds */
         } else {
-          printf("Client fd %d: %s", fds[i].fd, buffer);
+          printf("Client fd %d: %s\n", fds[i].fd, buffer);
         }
 
       }

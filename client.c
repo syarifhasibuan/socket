@@ -9,7 +9,7 @@
 
 #define TIMEOUT     2500
 #define BUFFER_SIZE 256
-#define LENGTH(X)               (sizeof X / sizeof X[0])
+#define LENGTH(X)   (sizeof X / sizeof X[0])
 
 int main(int argc, char* argv[])
 {
@@ -71,14 +71,16 @@ int main(int argc, char* argv[])
     if (fds[0].revents & POLLIN) {
       char buffer[BUFFER_SIZE] = {0};
 
-      ret = read(0, buffer, BUFFER_SIZE);
+      ret = read(0, buffer, BUFFER_SIZE - 1);
+
       if (ret == -1) {
         perror("read from stdin");
-        /* free(buffer); */
         continue;
+      } else if (ret > 0) {
+        buffer[ret] = '\0';  // Null-terminate the string
       }
 
-      send(fds[1].fd, buffer, BUFFER_SIZE, 0);
+      send(fds[1].fd, buffer, ret, 0);
     }
 
     if (fds[1].revents & POLLIN) {
@@ -91,7 +93,7 @@ int main(int argc, char* argv[])
         printf("Connection closed by foreign host.\n");
         break;
       } else {
-        printf("Server: %s", buffer);
+        printf("Server: %s\n", buffer);
       }
     }
   }
