@@ -11,7 +11,7 @@
 #define BACKLOG 10
 #define DEFAULT_IP   "127.0.0.1"
 #define DEFAULT_PORT "12345"
-#define MAX_CLIENTS 2
+#define MAX_CLIENTS 10
 #define TIMEOUT 2500
 #define BUFFER_SIZE 256
 
@@ -94,28 +94,24 @@ int main(int argc, char *argv[])
     if (ret == -1) {
       perror("Poll failed");
       continue;
+    } else if (ret == 0) {
+      continue;
     }
 
     /* Read from stdin and broadcast message from server */
     if (fds[0].revents & POLLIN) {
-      int ret;
-      char *buffer = calloc(BUFFER_SIZE, sizeof(char));
-      if (buffer == NULL) {
-        perror("buffer memory allocation");
-      }
+      char buffer[BUFFER_SIZE] = {0};
 
       ret = read(0, buffer, BUFFER_SIZE);
       if (ret == -1) {
         perror("read from stdin");
-        free(buffer);
-        break;
+        continue;
       }
 
       for (int i = base_pollfd; i < client_count + base_pollfd; i++) {
-        send(fds[i].fd, buffer, BUFFER_SIZE, 0);
+        send(fds[i].fd, buffer, ret, 0);
       }
 
-      free(buffer);
     }
 
     /* Check if there is new connection */
@@ -123,7 +119,7 @@ int main(int argc, char *argv[])
       struct sockaddr_storage incoming_addr;
       socklen_t addr_size = sizeof incoming_addr;
       new_fd = accept(sockfd, (struct sockaddr *)&incoming_addr, &addr_size);
-      if (new_fd == - 1) {
+      if (new_fd == -1) {
         perror("Accept failed");
         continue;
       }
@@ -147,9 +143,11 @@ int main(int argc, char *argv[])
 
     /* Check for any data in the client */
     for (int i = base_pollfd; i < client_count + base_pollfd; i++) {
+
       if (fds[i].revents & POLLIN) {
-        char buffer[BUFFER_SIZE];
-        int bytes_received = recv(fds[i].fd, buffer, sizeof buffer - 1, 0);
+        char buffer[BUFFER_SIZE] = {0};
+        int bytes_received = recv(fds[i].fd, buffer, BUFFER_SIZE, 0);
+
         if (bytes_received < 0) {
           perror("Recv failed");
         } else if (bytes_received == 0) {
@@ -158,9 +156,9 @@ int main(int argc, char *argv[])
           client_count--;
           fds[i] = fds[base_pollfd + client_count]; /* Reorder fds */
         } else {
-          buffer[bytes_received] = '\0';
-          printf("Received from client %d: %s", fds[i].fd, buffer);
+          printf("Client fd %d: %s", fds[i].fd, buffer);
         }
+
       }
     }
   }
